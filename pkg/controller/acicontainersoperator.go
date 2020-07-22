@@ -85,9 +85,12 @@ type Controller struct {
 var Version = map[string]bool{
 	"openshift-4.3": true,
 	"cloud": true,
+	"openshift-4.4-esx": true,
+	"openshift-4.4-openstack": true,
 }
 var Dnsoper = map[string]bool{
 	"openshift-4.3": true,
+	"openshift-4.4-openstack": true,
 }
 const aciContainersController = "aci-containers-controller"
 const aciContainersHostDaemonset = "aci-containers-host"
