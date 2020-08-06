@@ -5,7 +5,7 @@ RUN microdnf install --enablerepo codeready-builder-for-rhel-8-x86_64-rpms \
     libtool pkgconfig autoconf automake make cmake file python2-six \
     openssl-devel git gcc gcc-c++ boost-devel diffutils python2-devel \
     libnetfilter_conntrack-devel wget which curl-devel procps zlib-devel \
-    && microdnf clean all
+    && microdnf clean all && rm -rf /var/cache/yum
 RUN wget https://github.com/Tencent/rapidjson/archive/v1.1.0.tar.gz \
   && tar xvfz v1.1.0.tar.gz \
   && cd rapidjson-1.1.0 \
@@ -32,7 +32,7 @@ RUN wget https://github.com/Tencent/rapidjson/archive/v1.1.0.tar.gz \
   && git submodule update \
   && git apply /3rdparty-debian/prometheus/prometheus-cpp.patch \
   && mkdir _build && cd _build \
-  && cmake .. -DBUILD_SHARED_LIBS=ON \
+  && cmake .. -DBUILD_SHARED_LIBS=ON -DENABLE_PUSH=OFF \
   && make $make_args && make install && make clean \
   && mv /usr/local/lib64/libprometheus-cpp-* /usr/local/lib/ \
   && cd / \
@@ -49,10 +49,10 @@ RUN wget https://github.com/Tencent/rapidjson/archive/v1.1.0.tar.gz \
   && make $make_args && make install && make clean \
   && cd / \
   && rm -rf grpc
-ENV CFLAGS='-fPIE -D_FORTIFY_SOURCE=2  -g -O2 -fstack-protector --param=ssp-buffer-size=4 -Wformat -Werror=format-security'
-ENV CXXFLAGS='-fPIE -D_FORTIFY_SOURCE=2  -g -O2 -fstack-protector --param=ssp-buffer-size=4 -Wformat -Werror=format-security'
-ENV LDFLAGS='-pie -Wl,-z,now -Wl,-z,relro'
-RUN git clone https://github.com/openvswitch/ovs.git --branch v2.12.0 --depth 1 \
+  && export CFLAGS='-fPIE -D_FORTIFY_SOURCE=2  -g -O2 -fstack-protector --param=ssp-buffer-size=4 -Wformat -Werror=format-security'
+  && export CXXFLAGS='-fPIE -D_FORTIFY_SOURCE=2  -g -O2 -fstack-protector --param=ssp-buffer-size=4 -Wformat -Werror=format-security'
+  && export LDFLAGS='-pie -Wl,-z,now -Wl,-z,relro'
+  && git clone https://github.com/openvswitch/ovs.git --branch v2.12.0 --depth 1 \
   && cd ovs \
   && ./boot.sh && ./configure --disable-ssl --disable-libcapng --enable-shared \
   && make $make_args && make install \
