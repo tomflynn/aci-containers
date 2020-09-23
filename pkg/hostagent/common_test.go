@@ -45,6 +45,7 @@ type testHostAgent struct {
 	fakeRCSource            *framework.FakeControllerSource
 	fakeNetworkPolicySource *framework.FakeControllerSource
 	fakeQosPolicySource     *framework.FakeControllerSource
+	fakeErspanPolicySource  *framework.FakeControllerSource
 	fakeSnatPolicySource    *framework.FakeControllerSource
 	fakeSnatGlobalSource    *framework.FakeControllerSource
 	fakeRdConfigSource      *framework.FakeControllerSource
@@ -145,6 +146,12 @@ func testAgentWithConf(hcf *HostAgentConfig) *testHostAgent {
 			ListFunc:  agent.fakeQosPolicySource.List,
 			WatchFunc: agent.fakeQosPolicySource.Watch,
 		})
+	agent.fakeErspanPolicySource = framework.NewFakeControllerSource()
+	agent.initErspanPolicyInformerBase(
+		&cache.ListWatch{
+			ListFunc:  agent.fakeErspanPolicySource.List,
+			WatchFunc: agent.fakeErspanPolicySource.Watch,
+		})
 	agent.fakeSnatPolicySource = framework.NewFakeControllerSource()
 	agent.initSnatPolicyInformerBase(
 		&cache.ListWatch{
@@ -172,6 +179,7 @@ func testAgentWithConf(hcf *HostAgentConfig) *testHostAgent {
 	agent.initDepPodIndex()
 	agent.initRCPodIndex()
 	agent.initQoSPolPodIndex()
+	agent.initErspanPolPodIndex()
 
 	return agent
 }

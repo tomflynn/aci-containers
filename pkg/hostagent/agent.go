@@ -66,8 +66,10 @@ type HostAgent struct {
 	controllerInformer    cache.SharedIndexInformer
 	snatPolicyInformer    cache.SharedIndexInformer
 	qosPolicyInformer     cache.SharedIndexInformer
+	erspanPolicyInformer  cache.SharedIndexInformer
 	rdConfigInformer      cache.SharedIndexInformer
 	qosPolPods            *index.PodSelectorIndex
+	erspanPolPods            *index.PodSelectorIndex
 	endpointSliceInformer cache.SharedIndexInformer
 	netPolPods            *index.PodSelectorIndex
 	depPods               *index.PodSelectorIndex
