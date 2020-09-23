@@ -23,6 +23,8 @@ import (
 	"github.com/noironetworks/aci-containers/pkg/index"
 	qospolicy "github.com/noironetworks/aci-containers/pkg/qospolicy/apis/aci.qos/v1"
 	qospolicyclset "github.com/noironetworks/aci-containers/pkg/qospolicy/clientset/versioned"
+	erspanpolicy "github.com/noironetworks/aci-containers/pkg/erspanpolicy/apis/aci.erspan/v1"
+	erspanpolicyclset "github.com/noironetworks/aci-containers/pkg/erspanpolicy/clientset/versioned"
 	"github.com/sirupsen/logrus"
 	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/core/v1"
@@ -260,6 +262,90 @@ func (agent *HostAgent) initQoSPolPodIndex() {
 		},
 	)
 	agent.qosPolPods.SetPodUpdateCallback(func(podkey string) {
+		podobj, exists, err := agent.podInformer.GetIndexer().GetByKey(podkey)
+		if exists && err == nil {
+			agent.podUpdated(podobj.(*v1.Pod))
+		}
+	})
+}
+
+func (agent *HostAgent) initErspanPolicyInformerFromClient(
+	erspanClient *erspanpolicyclset.Clientset) {
+	agent.initErspanPolicyInformerBase(
+		cache.NewListWatchFromClient(
+			erspanClient.AciV1().RESTClient(), "erspanpolicies",
+			metav1.NamespaceAll, fields.Everything()))
+}
+
+func (agent *HostAgent) initErspanPolicyInformerBase(listWatch *cache.ListWatch) {
+	agent.erspanPolicyInformer =
+		cache.NewSharedIndexInformer(
+			listWatch, &erspanpolicy.ErspanPolicy{}, 0,
+			cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc},
+		)
+
+	agent.erspanPolicyInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		AddFunc: func(obj interface{}) {
+			agent.erspanPolicyAdded(obj)
+		},
+		UpdateFunc: func(oldobj interface{}, newobj interface{}) {
+			agent.erspanPolicyChanged(oldobj, newobj)
+		},
+		DeleteFunc: func(obj interface{}) {
+			agent.erspanPolicyDeleted(obj)
+		},
+	},
+	)
+}
+
+func (agent *HostAgent) erspanPolicyAdded(obj interface{}) {
+	agent.erspanPolPods.UpdateSelectorObj(obj)
+}
+
+func (agent *HostAgent) erspanPolicyChanged(oldobj, newobj interface{}) {
+	oldspan := oldobj.(*erspanpolicy.ErspanPolicy)
+	newspan := newobj.(*erspanpolicy.ErspanPolicy)
+	if !reflect.DeepEqual(oldspan.Spec.Selector, newspan.Spec.Selector) {
+		agent.erspanPolPods.UpdateSelectorObjNoCallback(newobj)
+	}
+
+	spankey, err := cache.MetaNamespaceKeyFunc(newspan)
+	if err != nil {
+		logrus.Error("Could not create erspan policy key: ", err)
+		return
+	}
+
+	if !reflect.DeepEqual(oldspan.Spec.Source, newspan.Spec.Source) {
+		peerPodKeys := agent.erspanPolPods.GetPodForObj(spankey)
+		for _, podkey := range peerPodKeys {
+			agent.podChanged(&podkey)
+		}
+	}
+	if !reflect.DeepEqual(oldspan.Spec.Dest, newspan.Spec.Dest) {
+		peerPodKeys := agent.erspanPolPods.GetPodForObj(spankey)
+		for _, podkey := range peerPodKeys {
+			agent.podChanged(&podkey)
+		}
+	}
+}
+
+func (agent *HostAgent) erspanPolicyDeleted(obj interface{}) {
+	agent.erspanPolPods.DeleteSelectorObj(obj)
+}
+
+func (agent *HostAgent) initErspanPolPodIndex() {
+	agent.erspanPolPods = index.NewPodSelectorIndex(
+		agent.log,
+		agent.podInformer.GetIndexer(), agent.nsInformer.GetIndexer(), agent.erspanPolicyInformer.GetIndexer(),
+		cache.MetaNamespaceKeyFunc,
+		func(obj interface{}) []index.PodSelector {
+			span := obj.(*erspanpolicy.ErspanPolicy)
+			ls := &metav1.LabelSelector{MatchLabels: span.Spec.Selector.Labels}
+			return index.PodSelectorFromNsAndSelector(span.ObjectMeta.Namespace,
+				ls)
+		},
+	)
+	agent.erspanPolPods.SetPodUpdateCallback(func(podkey string) {
 		podobj, exists, err := agent.podInformer.GetIndexer().GetByKey(podkey)
 		if exists && err == nil {
 			agent.podUpdated(podobj.(*v1.Pod))
