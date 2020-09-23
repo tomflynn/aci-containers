@@ -28,6 +28,7 @@ import (
 	md "github.com/noironetworks/aci-containers/pkg/metadata"
 	nodeinfoclientset "github.com/noironetworks/aci-containers/pkg/nodeinfo/clientset/versioned"
 	qospolicyclset "github.com/noironetworks/aci-containers/pkg/qospolicy/clientset/versioned"
+	erspanpolicyclset "github.com/noironetworks/aci-containers/pkg/erspanpolicy/clientset/versioned"
 	rdconfigclset "github.com/noironetworks/aci-containers/pkg/rdconfig/clientset/versioned"
 	snatglobalclset "github.com/noironetworks/aci-containers/pkg/snatglobalinfo/clientset/versioned"
 	snatlocalinfoclset "github.com/noironetworks/aci-containers/pkg/snatlocalinfo/clientset/versioned"
@@ -49,6 +50,7 @@ type K8sEnvironment struct {
 	snatGlobalClient    *snatglobalclset.Clientset
 	snatPolicyClient    *snatpolicyclset.Clientset
 	qosPolicyClient     *qospolicyclset.Clientset
+	erspanPolicyClient  *erspanpolicyclset.Clientset
 	nodeInfo            *nodeinfoclientset.Clientset
 	rdConfig            *rdconfigclset.Clientset
 	snatLocalInfoClient *snatlocalinfoclset.Clientset
@@ -116,7 +118,12 @@ func NewK8sEnvironment(config *HostAgentConfig, log *logrus.Logger) (*K8sEnviron
 	}
 	qosPolicyClient, err := qospolicyclset.NewForConfig(restconfig)
 	if err != nil {
-		log.Debug("Failed to intialize snatpolicy info client")
+		log.Debug("Failed to intialize qospolicy info client")
+		return nil, err
+	}
+	erspanPolicyClient, err := erspanpolicyclset.NewForConfig(restconfig)
+	if err != nil {
+		log.Debug("Failed to intialize erspanpolicy info client")
 		return nil, err
 	}
 	rdConfig, err := rdconfigclset.NewForConfig(restconfig)
@@ -130,7 +137,7 @@ func NewK8sEnvironment(config *HostAgentConfig, log *logrus.Logger) (*K8sEnviron
 		return nil, err
 	}
 	return &K8sEnvironment{kubeClient: kubeClient, snatGlobalClient: snatGlobalClient,
-		nodeInfo: nodeInfo, snatPolicyClient: snatPolicyClient, qosPolicyClient: qosPolicyClient, rdConfig: rdConfig, snatLocalInfoClient: snatLocalInfoClient}, nil
+		nodeInfo: nodeInfo, snatPolicyClient: snatPolicyClient, qosPolicyClient: qosPolicyClient, erspanPolicyClient: erspanPolicyClient, rdConfig: rdConfig, snatLocalInfoClient: snatLocalInfoClient}, nil
 }
 
 func (env *K8sEnvironment) Init(agent *HostAgent) error {
@@ -148,8 +155,10 @@ func (env *K8sEnvironment) Init(agent *HostAgent) error {
 	env.agent.initSnatGlobalInformerFromClient(env.snatGlobalClient)
 	env.agent.initSnatPolicyInformerFromClient(env.snatPolicyClient)
 	env.agent.initQoSPolicyInformerFromClient(env.qosPolicyClient)
+	env.agent.initErspanPolicyInformerFromClient(env.erspanPolicyClient)
 	env.agent.initRdConfigInformerFromClient(env.rdConfig)
 	env.agent.initQoSPolPodIndex()
+	env.agent.initErspanPolPodIndex()
 	env.agent.initNetPolPodIndex()
 	env.agent.initDepPodIndex()
 	env.agent.initRCPodIndex()
@@ -181,6 +190,7 @@ func (env *K8sEnvironment) PrepareRun(stopCh <-chan struct{}) (bool, error) {
 	go env.agent.snatGlobalInformer.Run(stopCh)
 	go env.agent.snatPolicyInformer.Run(stopCh)
 	go env.agent.qosPolicyInformer.Run(stopCh)
+	go env.agent.erspanPolicyInformer.Run(stopCh)
 	go env.agent.rdConfigInformer.Run(stopCh)
 	env.agent.log.Info("Waiting for cache sync for remaining objects")
 	cache.WaitForCacheSync(stopCh,
