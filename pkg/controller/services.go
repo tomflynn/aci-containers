@@ -888,6 +888,28 @@ func (cont *AciController) updateDeviceCluster() {
 	cont.apicConn.WriteApicObjects(name, serviceObjs)
 }
 
+// func (cont *AciController) clientEpAdded(obj apicapi.ApicObject) {
+// vmmSrc := obj.GetAttrStr("vmmSrc")
+// fvCEpMac := obj.GetAttrStr("mac")
+// if vmmSrc == "k8s" {
+// var macAddr []string
+// cont.indexMutex.Lock()
+// cont.log.Debug("Found fvCEp with vmm source k8s")
+// for maddr := range cont.clientEndPoint{
+// fvCEpMac = append(maddr)
+// }
+// }
+// }
+
+// func (cont *AciController) clientEpAdded(obj apicapi.ApicObject) {
+// vmmSrc := obj.GetAttrStr("vmmSrc")
+// name := "fvCEp"
+// if vmmSrc == "k8s" {
+// fvCEpdn := obj.GetAttrStr("dn")
+// cont.apicConn.WriteApicObjects(name, fvCEpdn)
+// }
+// }
+
 func (cont *AciController) fabricPathLogger(node string,
 	obj apicapi.ApicObject) *logrus.Entry {
 

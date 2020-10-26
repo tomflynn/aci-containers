@@ -127,6 +127,7 @@ type AciController struct {
 
 	nodeServiceMetaCache map[string]*nodeServiceMeta
 	nodeOpflexDevice     map[string]apicapi.ApicSlice
+	clientEndPoint       map[string]apicapi.ApicSlice
 	nodePodNetCache      map[string]*nodePodNetMeta
 	serviceMetaCache     map[string]*serviceMeta
 	snatPolicyCache      map[string]*ContSnatPolicy
@@ -606,6 +607,18 @@ func (cont *AciController) Run(stopCh <-chan struct{}) {
 		func(dn string) {
 			cont.opflexDeviceDeleted(dn)
 		})
+
+	cont.apicConn.AddSubscriptionClass("fvCEp",
+		[]string{"fvCEp"}, "")
+
+	// cont.apicConn.SetSubscriptionHooks("fvCEp",
+	// func(obj apicapi.ApicObject) bool {
+	// cont.clientEpAdded(obj)
+	// return true
+	// },
+	// func(dn string) {
+	// cont.clientEpDeleted(dn)
+	// })
 	go cont.apicConn.Run(stopCh)
 }
 
