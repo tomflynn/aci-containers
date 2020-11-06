@@ -207,7 +207,10 @@ func (env *K8sEnvironment) PrepareRun(stopCh <-chan struct{}) error {
 	cont.registerCRDHook(qosCRDName, qosInit)
 	cont.registerCRDHook(netflowCRDName, netflowInit)
 	cont.registerCRDHook(erspanCRDName, erspanInit)
+<<<<<<< HEAD
 	cont.registerCRDHook(pofIfCRDName, podIfInit)
+=======
+>>>>>>> 78e48ecbc6bd25ca58cc95fdb61f6aa37bc7b1ae
 	cont.log.Debug("Starting informers")
 	go cont.nodeInformer.Run(stopCh)
 	go cont.namespaceInformer.Run(stopCh)

@@ -968,6 +968,91 @@ var metadata = map[string]*apicMeta{
 		},
 		children: []string{},
 	},
+	"spanVSrcGrp": {
+		attributes: map[string]interface{}{
+			"name":    "",
+			"adminSt": "start",
+		},
+		children: []string{
+			"spanVSrc", 
+			"spanSpanLbl",
+		},
+	},
+	"spanVSrc": {
+		attributes: map[string]interface{}{
+			"name":    "",
+			"dir":     "both",
+		},
+		children: []string{
+			"spanRsSrcToVPort", 
+		},
+	},
+	"spanRsSrcToVPort": {
+		attributes: map[string]interface{}{
+			"tDn":   "",
+			"tCl":   "fvCEp",
+			"tType": "mo",
+		},
+		children: []string{},
+	},
+	"spanVDestGrp": {
+		attributes: map[string]interface{}{
+			"name":    "",
+		},
+		children: []string{
+			"spanVDest", 
+		},
+	},
+	"spanVDest": {
+		attributes: map[string]interface{}{
+			"name":    "",
+		},
+		children: []string{
+			"spanVEpgSummary", 
+		},
+	},
+	"spanVEpgSummary": {
+		attributes: map[string]interface{}{
+			"dstIp":  "",
+			"flowId": "1",
+		},
+		children: []string{},
+	},
+	"spanSpanLbl": {
+		attributes: map[string]interface{}{
+			"name": "",
+			"tag":  "yellow-green",
+		},
+		children: []string{},
+	},
+	"infraAccBndlGrp": {
+		attributes: map[string]interface{}{
+			"name":  "",
+			"lagT":  "node",
+		},
+		children: []string{
+			"infraRsSpanVSrcGrp",
+			"infraRsSpanVDestGrp",
+		},
+	},
+	"infraRsSpanVSrcGrp": {
+		attributes: map[string]interface{}{
+			"tDn":   			  "",
+			"tCl":   			  "spanVSrcGrp",
+			"tType": 			  "name",
+			"tnSpanVSrcGrpName":  "",
+		},
+		children: []string{},
+	},
+	"infraRsSpanVDestGrp": {
+		attributes: map[string]interface{}{
+			"tDn":   			  "",
+			"tCl":   			  "spanVDestGrp",
+			"tType": 			  "name",
+			"tnSpanVDestGrpName": "",
+		},
+		children: []string{},
+	},
 }
 
 func AddMetaDataChild(parent, child string) error {
