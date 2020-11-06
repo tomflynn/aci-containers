@@ -20,15 +20,18 @@ import (
 
 	erspanpolicy "github.com/noironetworks/aci-containers/pkg/erspanpolicy/apis/aci.erspan/v1"
 	erspanclientset "github.com/noironetworks/aci-containers/pkg/erspanpolicy/clientset/versioned"
+	podIfclientset "github.com/noironetworksaci-containers/pkg/gbpcrd/clientset/versioned/"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	podIfpolicy "github.com/noironetworks/aci-containers/pkg/gbpcrd/apis/acipolicy/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
-
 	"github.com/noironetworks/aci-containers/pkg/apicapi"
+	
 )
 
 const (
 	erspanCRDName = "erspanpolicies.aci.erspan"
+	pofIfCRDName = "podifpolicies.aci.podif"
 )
 
 func ErspanPolicyLogger(log *logrus.Logger, erspan *erspanpolicy.ErspanPolicy) *logrus.Entry {
@@ -51,6 +54,18 @@ func erspanInit(cont *AciController, stopCh <-chan struct{}) {
 	cont.erspanInformer.Run(stopCh)
 }
 
+func podIfInit(cont *AciController, stopCh <-chan struct{}) {
+	cont.log.Debug("Initializing podIf client")
+	restconfig := cont.env.RESTConfig()
+	podIfClient, err := podIfclientset.NewForConfig(restconfig)
+	if err != nil {
+		cont.log.Errorf("Failed to intialize podIf client")
+		return
+	}
+	cont.initPodIfInformerFromClient(podIfClient)
+	cont.podIfInformer.Run(stopCh)
+}
+
 func (cont *AciController) initErspanInformerFromClient(
 	erspanClient *erspanclientset.Clientset) {
 	cont.initErspanInformerBase(
@@ -59,10 +74,17 @@ func (cont *AciController) initErspanInformerFromClient(
 			metav1.NamespaceAll, fields.Everything()))
 }
 
+func (cont *AciController) initPodIfInformerFromClient(
+	podIfClient *podIfclientset.Clientset) {
+	cont.initPodIfInformerBase(
+		cache.NewListWatchFromClient(
+			podIfClient.AciV1().RESTClient(), "podIfpolicies",
+			metav1.NamespaceAll, fields.Everything()))
+}
+
 func (cont *AciController) initErspanInformerBase(listWatch *cache.ListWatch) {
 	cont.erspanIndexer, cont.erspanInformer = cache.NewIndexerInformer(
-		listWatch,
-		&erspanpolicy.ErspanPolicy{}, 0,
+		listWatch, &erspanpolicy.ErspanPolicy{}, 0,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				cont.erspanPolicyUpdated(obj)
@@ -77,6 +99,65 @@ func (cont *AciController) initErspanInformerBase(listWatch *cache.ListWatch) {
 		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc},
 	)
 	cont.log.Debug("Initializing Erspan Policy Informers")
+}
+
+func (cont *AciController) initPodIfInformerBase(listWatch *cache.ListWatch) {
+	cont.podIfIndexer, cont.podIfInformer = cache.NewIndexerInformer(
+		listWatch, &aciv1.PodIF{}, 0,
+		cache.ResourceEventHandlerFuncs{
+			AddFunc: func(obj interface{}) {
+				cont.podIFAdded(obj)
+			},
+			UpdateFunc: func(oldobj interface{}, newobj interface{}) {
+				cont.podIFAdded(newobj)
+			},
+			DeleteFunc: func(obj interface{}) {
+				cont.podIFDeleted(obj)
+			},
+		},
+		cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc},
+	)
+	cont.log.Debug("Initializing podif Informers")
+}
+
+type EndPointData struct {
+	MacAddr   string   `json:"macaddr,omitempty"`
+	EPG       string   `json:"epg,omitempty"`
+	Namespace string   `json:"namespace,omitempty"`
+	PodName   string   `json:"podname,omitempty"`
+}
+
+func (cont *AciController) podIFAdded(obj interface{}) {
+	podif, ok := obj.(*podIfpolicy.PodIF)
+	if !ok {
+		kw.log.Errorf("podIFAdded: Bad object type")
+		return
+	}
+
+	cont.log.Infof("podIFAdded - %s", podif.ObjectMeta.Name)
+	mapOfPodNametoEP := make(map[string]*EndPointData){
+		PodName:   podif.Status.PodName,
+		MacAddr:   podif.Status.MacAddr,
+		EPG:       podif.Status.EPG,
+		Namespace: podif.Status.PodNS,
+	}
+	
+}
+
+func (cont *AciController) podIFDeleted(obj interface{}) {
+	podif, ok := obj.(*podIfpolicy.PodIF)
+	if !ok {
+		kw.log.Errorf("podIFDeleted: Bad object type")
+		return
+	}
+
+	kw.log.Infof("podIFDeleted - %s", podif.ObjectMeta.Name)
+	ep := cont.EndPoint{
+		MacAddr:   podif.Status.MacAddr,
+		EPG:       podif.Status.EPG,
+		Namespace: podif.Status.PodNS,
+		PodName:   podif.Status.PodName,
+	}
 }
 
 func (cont *AciController) erspanPolicyUpdated(obj interface{}) {
@@ -144,6 +225,7 @@ func (cont *AciController) handleErspanPolUpdate(obj interface{}) bool {
 	src := apicapi.NewSpanVSrc(srcGrp.GetDn(), labelKey)
 	srcGrp.AddChild(src)
 	src.SetAttr("dir", span.Spec.Source.Direction)
+	//fvCEpDn := 
 	srcCEp := apicapi.NewSpanRsSrcToVPort(src.GetDn())
 	src.AddChild(srcCEp)
 	
@@ -155,7 +237,7 @@ func (cont *AciController) handleErspanPolUpdate(obj interface{}) bool {
 	destSummary := apicapi.NewSpanVEpgSummary(dest.GetDn())
 	dest.AddChild(destSummary)
 	destSummary.SetAttr("dstIp", span.Spec.Dest.DstIp)
-	destSummary.SetAttr("flowId", span.Spec.Dest.FlowId)
+	destSummary.SetAttr("flowId", strconv.Itoa(span.Spec.Dest.FlowId))
 	
 	srcGrp.GetAttr["name"] = tnSpanVSrcGrpName
 	destGrp.GetAttr["name"] = tnSpanVDestGrpName
