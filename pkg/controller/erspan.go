@@ -84,7 +84,8 @@ func (cont *AciController) initPodIfInformerFromClient(
 
 func (cont *AciController) initErspanInformerBase(listWatch *cache.ListWatch) {
 	cont.erspanIndexer, cont.erspanInformer = cache.NewIndexerInformer(
-		listWatch, &erspanpolicy.ErspanPolicy{}, 0,
+		listWatch,
+		&erspanpolicy.ErspanPolicy{}, 0,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				cont.erspanPolicyUpdated(obj)
@@ -224,8 +225,10 @@ func (cont *AciController) handleErspanPolUpdate(obj interface{}) bool {
 	srcGrp.SetAttr("adminSt", span.Spec.Source.AdminState)
 	src := apicapi.NewSpanVSrc(srcGrp.GetDn(), labelKey)
 	srcGrp.AddChild(src)
+
 	src.SetAttr("dir", span.Spec.Source.Direction)
 	//fvCEpDn := 
+
 	srcCEp := apicapi.NewSpanRsSrcToVPort(src.GetDn())
 	src.AddChild(srcCEp)
 	
