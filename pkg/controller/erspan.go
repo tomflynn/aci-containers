@@ -20,29 +20,22 @@ import (
 
 	erspanpolicy "github.com/noironetworks/aci-containers/pkg/erspanpolicy/apis/aci.erspan/v1"
 	erspanclientset "github.com/noironetworks/aci-containers/pkg/erspanpolicy/clientset/versioned"
-<<<<<<< HEAD
 	podIfclientset "github.com/noironetworksaci-containers/pkg/gbpcrd/clientset/versioned/"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	podIfpolicy "github.com/noironetworks/aci-containers/pkg/gbpcrd/apis/acipolicy/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
 	"github.com/noironetworks/aci-containers/pkg/apicapi"
-	
-=======
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/noironetworks/aci-containers/pkg/apicapi"
->>>>>>> 78e48ecbc6bd25ca58cc95fdb61f6aa37bc7b1ae
 )
 
 const (
 	erspanCRDName = "erspanpolicies.aci.erspan"
-<<<<<<< HEAD
 	pofIfCRDName = "podifpolicies.aci.podif"
-=======
->>>>>>> 78e48ecbc6bd25ca58cc95fdb61f6aa37bc7b1ae
 )
 
 func ErspanPolicyLogger(log *logrus.Logger, erspan *erspanpolicy.ErspanPolicy) *logrus.Entry {
@@ -65,7 +58,6 @@ func erspanInit(cont *AciController, stopCh <-chan struct{}) {
 	cont.erspanInformer.Run(stopCh)
 }
 
-<<<<<<< HEAD
 func podIfInit(cont *AciController, stopCh <-chan struct{}) {
 	cont.log.Debug("Initializing podIf client")
 	restconfig := cont.env.RESTConfig()
@@ -78,8 +70,6 @@ func podIfInit(cont *AciController, stopCh <-chan struct{}) {
 	cont.podIfInformer.Run(stopCh)
 }
 
-=======
->>>>>>> 78e48ecbc6bd25ca58cc95fdb61f6aa37bc7b1ae
 func (cont *AciController) initErspanInformerFromClient(
 	erspanClient *erspanclientset.Clientset) {
 	cont.initErspanInformerBase(
@@ -88,7 +78,6 @@ func (cont *AciController) initErspanInformerFromClient(
 			metav1.NamespaceAll, fields.Everything()))
 }
 
-<<<<<<< HEAD
 func (cont *AciController) initPodIfInformerFromClient(
 	podIfClient *podIfclientset.Clientset) {
 	cont.initPodIfInformerBase(
@@ -100,12 +89,10 @@ func (cont *AciController) initPodIfInformerFromClient(
 func (cont *AciController) initErspanInformerBase(listWatch *cache.ListWatch) {
 	cont.erspanIndexer, cont.erspanInformer = cache.NewIndexerInformer(
 		listWatch, &erspanpolicy.ErspanPolicy{}, 0,
-=======
 func (cont *AciController) initErspanInformerBase(listWatch *cache.ListWatch) {
 	cont.erspanIndexer, cont.erspanInformer = cache.NewIndexerInformer(
 		listWatch,
 		&erspanpolicy.ErspanPolicy{}, 0,
->>>>>>> 78e48ecbc6bd25ca58cc95fdb61f6aa37bc7b1ae
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				cont.erspanPolicyUpdated(obj)
@@ -122,7 +109,6 @@ func (cont *AciController) initErspanInformerBase(listWatch *cache.ListWatch) {
 	cont.log.Debug("Initializing Erspan Policy Informers")
 }
 
-<<<<<<< HEAD
 func (cont *AciController) initPodIfInformerBase(listWatch *cache.ListWatch) {
 	cont.podIfIndexer, cont.podIfInformer = cache.NewIndexerInformer(
 		listWatch, &aciv1.PodIF{}, 0,
@@ -182,8 +168,6 @@ func (cont *AciController) podIFDeleted(obj interface{}) {
 	}
 }
 
-=======
->>>>>>> 78e48ecbc6bd25ca58cc95fdb61f6aa37bc7b1ae
 func (cont *AciController) erspanPolicyUpdated(obj interface{}) {
 	erspanPolicy := obj.(*erspanpolicy.ErspanPolicy)
 	key, err := cache.MetaNamespaceKeyFunc(erspanPolicy)
@@ -249,10 +233,7 @@ func (cont *AciController) handleErspanPolUpdate(obj interface{}) bool {
 	src := apicapi.NewSpanVSrc(srcGrp.GetDn(), labelKey)
 	srcGrp.AddChild(src)
 	src.SetAttr("dir", span.Spec.Source.Direction)
-<<<<<<< HEAD
 	//fvCEpDn := 
-=======
->>>>>>> 78e48ecbc6bd25ca58cc95fdb61f6aa37bc7b1ae
 	srcCEp := apicapi.NewSpanRsSrcToVPort(src.GetDn())
 	src.AddChild(srcCEp)
 	
@@ -264,11 +245,8 @@ func (cont *AciController) handleErspanPolUpdate(obj interface{}) bool {
 	destSummary := apicapi.NewSpanVEpgSummary(dest.GetDn())
 	dest.AddChild(destSummary)
 	destSummary.SetAttr("dstIp", span.Spec.Dest.DstIp)
-<<<<<<< HEAD
 	destSummary.SetAttr("flowId", strconv.Itoa(span.Spec.Dest.FlowId))
-=======
 	destSummary.SetAttr("flowId", span.Spec.Dest.FlowId)
->>>>>>> 78e48ecbc6bd25ca58cc95fdb61f6aa37bc7b1ae
 	
 	srcGrp.GetAttr["name"] = tnSpanVSrcGrpName
 	destGrp.GetAttr["name"] = tnSpanVDestGrpName

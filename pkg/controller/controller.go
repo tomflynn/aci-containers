@@ -62,12 +62,8 @@ type AciController struct {
 	serviceQueue      workqueue.RateLimitingInterface
 	snatQueue         workqueue.RateLimitingInterface
 	netflowQueue      workqueue.RateLimitingInterface
-<<<<<<< HEAD
 	erspanQueue       workqueue.RateLimitingInterface
 	podIfQueue       workqueue.RateLimitingInterface
-=======
-	erspanQueue      workqueue.RateLimitingInterface
->>>>>>> 78e48ecbc6bd25ca58cc95fdb61f6aa37bc7b1ae
 	snatNodeInfoQueue workqueue.RateLimitingInterface
 	istioQueue        workqueue.RateLimitingInterface
 
@@ -96,15 +92,10 @@ type AciController struct {
 	qosInformer           cache.Controller
 	netflowIndexer        cache.Indexer
 	netflowInformer       cache.Controller
-<<<<<<< HEAD
 	erspanIndexer         cache.Indexer
 	erspanInformer        cache.Controller
 	podIfIndexer          cache.Indexer
 	podIfInformer         cache.Controller
-=======
-	erspanIndexer        cache.Indexer
-	erspanInformer       cache.Controller
->>>>>>> 78e48ecbc6bd25ca58cc95fdb61f6aa37bc7b1ae
 	istioIndexer          cache.Indexer
 	istioInformer         cache.Controller
 	endpointSliceIndexer  cache.Indexer
@@ -280,10 +271,7 @@ func NewController(config *ControllerConfig, env Environment, log *logrus.Logger
 		qosQueue:          createQueue("qos"),
 		netflowQueue:      createQueue("netflow"),
 		erspanQueue:       createQueue("erspan"),
-<<<<<<< HEAD
 		podIfQueue:        createQueue("podIf"),
-=======
->>>>>>> 78e48ecbc6bd25ca58cc95fdb61f6aa37bc7b1ae
 		serviceQueue:      createQueue("service"),
 		snatQueue:         createQueue("snat"),
 		snatNodeInfoQueue: createQueue("snatnodeinfo"),
@@ -553,11 +541,7 @@ func (cont *AciController) Run(stopCh <-chan struct{}) {
 			qs = []workqueue.RateLimitingInterface{
 				cont.podQueue, cont.netPolQueue, cont.qosQueue,
 				cont.serviceQueue, cont.snatQueue, cont.netflowQueue,
-<<<<<<< HEAD
 				cont.snatNodeInfoQueue, cont.erspanQueue, podIfQueue,
-=======
-				cont.snatNodeInfoQueue, cont.erspanQueue,
->>>>>>> 78e48ecbc6bd25ca58cc95fdb61f6aa37bc7b1ae
 			}
 		}
 		for _, q := range qs {
