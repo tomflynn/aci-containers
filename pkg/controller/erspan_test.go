@@ -16,20 +16,20 @@
 package controller
 
 import (
-	"net"
+	//"net"
 	"testing"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
 
 	erspanpolicy "github.com/noironetworks/aci-containers/pkg/erspanpolicy/apis/aci.erspan/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	//metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/noironetworks/aci-containers/pkg/apicapi"
-	"github.com/noironetworks/aci-containers/pkg/ipam"
+	//"github.com/noironetworks/aci-containers/pkg/ipam"
 	tu "github.com/noironetworks/aci-containers/pkg/testutil"
-	"github.com/stretchr/testify/assert"
-	"k8s.io/client-go/tools/cache"
+	//"github.com/stretchr/testify/assert"
+	//"k8s.io/client-go/tools/cache"
 )
 
 func staticErspanReqKey() string {
@@ -42,10 +42,10 @@ type spanTestAugment struct {
 }
 
 type spanTest struct {
-	erspanPol  *erspanpolicy.ErspanPolicy
-	aciObj     apicapi.ApicObject
-	augment    *spanTestAugment
-	desc       string
+	erspanPol *erspanpolicy.ErspanPolicy
+	aciObj    apicapi.ApicObject
+	augment   *spanTestAugment
+	desc      string
 }
 
 func addErspanServices(cont *testAciController, augment *spanTestAugment) {
@@ -71,7 +71,7 @@ func makeSpan(source apicapi.ApicSlice, dest apicapi.ApicSlice, srcGrpName strin
 	src1.SetAttr("direction", direction)
 	srcCEp1 := apicapi.NewSpanRsSrcToVPort(src1.GetDn(), cep)
 	src.AddChild(srcCEp)
-	
+
 	destGrp1 := apicapi.NewSpanVDestGrp(destGrpName)
 	dest1 := apicapi.NewSpanVDest(destGrp1.GetDn(), destName)
 	destGrp1.AddChild(dest1)

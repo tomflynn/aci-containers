@@ -17,12 +17,14 @@ package controller
 
 import (
 	"github.com/sirupsen/logrus"
+	"strconv"
+	"fmt"
 
 	"github.com/noironetworks/aci-containers/pkg/apicapi"
 	erspanpolicy "github.com/noironetworks/aci-containers/pkg/erspanpolicy/apis/aci.erspan/v1"
 	erspanclientset "github.com/noironetworks/aci-containers/pkg/erspanpolicy/clientset/versioned"
 	podIfpolicy "github.com/noironetworks/aci-containers/pkg/gbpcrd/apis/acipolicy/v1"
-	podIfclientset "github.com/noironetworksaci-containers/pkg/gbpcrd/clientset/versioned"
+	podIfclientset "github.com/noironetworks/aci-containers/pkg/gbpcrd/clientset/versioned"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
@@ -32,6 +34,25 @@ const (
 	erspanCRDName = "erspanpolicies.aci.erspan"
 	pofIfCRDName  = "podifpolicies.aci.podif"
 )
+
+type PodSelector struct {
+	Labels    map[string]string `json:"labels,omitempt"`
+	Namespace string            `json:"namespace,omitempty"`
+}
+
+type ErspanPolicySpec struct {
+	Selector PodSelector        `json:"selector,omitempty"`
+	Source   ErspanPolicingType `json:"source,omitempty"`
+	Dest     ErspanPolicingType `json:"destination,omitempty"`
+}
+
+type ErspanPolicingType struct {
+	AdminState string `json:"admin_state"`
+	Direction  string `json:"direction"`
+	DestIp     string `json:"destIp"`
+	FlowId     int    `json:"flowId"`
+	Tag        string `json:"tag,omitempty"`
+}
 
 func ErspanPolicyLogger(log *logrus.Logger, erspan *erspanpolicy.ErspanPolicy) *logrus.Entry {
 	return log.WithFields(logrus.Fields{
@@ -103,7 +124,7 @@ func (cont *AciController) initErspanInformerBase(listWatch *cache.ListWatch) {
 
 func (cont *AciController) initPodIfInformerBase(listWatch *cache.ListWatch) {
 	cont.podIfIndexer, cont.podIfInformer = cache.NewIndexerInformer(
-		listWatch, &aciv1.PodIF{}, 0,
+		listWatch, &podIfpolicy.PodIF{}, 0,
 		cache.ResourceEventHandlerFuncs{
 			AddFunc: func(obj interface{}) {
 				cont.podIFAdded(obj)
@@ -123,7 +144,7 @@ func (cont *AciController) initPodIfInformerBase(listWatch *cache.ListWatch) {
 func (cont *AciController) podIFAdded(obj interface{}) {
 	podif, ok := obj.(*podIfpolicy.PodIF)
 	if !ok {
-		kw.log.Errorf("podIFAdded: Bad object type")
+		cont.log.Errorf("podIFAdded: Bad object type")
 		return
 	}
 
@@ -134,7 +155,7 @@ func (cont *AciController) podIFAdded(obj interface{}) {
 func (cont *AciController) podIFDeleted(obj interface{}) {
 	podif, ok := obj.(*podIfpolicy.PodIF)
 	if !ok {
-		kw.log.Errorf("podIFDeleted: Bad object type")
+		cont.log.Errorf("podIFDeleted: Bad object type")
 		return
 	}
 
@@ -183,10 +204,10 @@ func (cont *AciController) erspanPolicyDelete(obj interface{}) {
 
 }
 
-type EndPointData struct {
-	MacAddr string
-	EPG     string
-}
+// type EndPointData struct {
+	// MacAddr string
+	// EPG     string
+// }
 
 func (cont *AciController) handleErspanPolUpdate(obj interface{}) bool {
 	span, ok := obj.(*erspanpolicy.ErspanPolicy)
@@ -194,10 +215,10 @@ func (cont *AciController) handleErspanPolUpdate(obj interface{}) bool {
 		cont.log.Error("handleErspanPolUpdate: Bad object type")
 		return false
 	}
-	podif, ok := obj.(*aciv1.PodIF)
+	podif, ok := obj.(*podIfpolicy.PodIF)
 	if !ok {
-		kw.log.Errorf("podIFAdded: Bad object type")
-		return
+		cont.log.Errorf("podIFAdded: Bad object type")
+		return false
 	}
 	logger := ErspanPolicyLogger(cont.log, span)
 	key, err := cache.MetaNamespaceKeyFunc(span)
@@ -208,7 +229,7 @@ func (cont *AciController) handleErspanPolUpdate(obj interface{}) bool {
 	labelKey := cont.aciNameForKey("span", key)
 	cont.log.Debug("create erspanpolicy")
 
-	var podIftoEp = map[string]*EndPointData{}
+	//var podIftoEp = map[string]*EndPointData{}
 	podIftoEp["PodName"] = &EndPointData{MacAddr: podif.Status.MacAddr, EPG: podif.Status.EPG}
 	PodName := podIftoEp["PodName"]
 	mac := PodName.MacAddr
@@ -236,12 +257,12 @@ func (cont *AciController) handleErspanPolUpdate(obj interface{}) bool {
 	destGrp.AddChild(dest)
 	destSummary := apicapi.NewSpanVEpgSummary(dest.GetDn())
 	dest.AddChild(destSummary)
-	destSummary.SetAttr("dstIp", span.Spec.Dest.DstIp)
+	destSummary.SetAttr("dstIp", span.Spec.Dest.DestIp)
 	destSummary.SetAttr("flowId", strconv.Itoa(span.Spec.Dest.FlowId))
 	apicSlice = append(apicSlice, destGrp)
 
 	// Set tag
-	lbl := apicapi.NewSpanSpanLbl(srcGrpDn, labelKey)
+	lbl := apicapi.NewSpanSpanLbl(srcGrp.GetDn(), labelKey)
 	lbl.SetAttr("tag", span.Spec.Dest.Tag)
 
 	//Enable erspan policy on all discovered vpc channels

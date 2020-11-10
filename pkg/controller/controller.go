@@ -63,7 +63,7 @@ type AciController struct {
 	snatQueue         workqueue.RateLimitingInterface
 	netflowQueue      workqueue.RateLimitingInterface
 	erspanQueue       workqueue.RateLimitingInterface
-	podIfQueue       workqueue.RateLimitingInterface
+	podIfQueue        workqueue.RateLimitingInterface
 	snatNodeInfoQueue workqueue.RateLimitingInterface
 	istioQueue        workqueue.RateLimitingInterface
 
@@ -127,6 +127,8 @@ type AciController struct {
 	targetPortIndex map[string]*portIndexEntry
 	// index of ip blocks referenced by network policy egress rules
 	netPolSubnetIndex cidranger.Ranger
+	
+	podIftoEp map[string]*EndPointData{}
 
 	apicConn     *apicapi.ApicConnection
 	tunnelIdBase int64
@@ -187,6 +189,11 @@ type portIndexEntry struct {
 type portRangeSnat struct {
 	start int
 	end   int
+}
+
+type EndPointData struct {
+	MacAddr string
+	EPG     string
 }
 
 type ServiceEndPointType interface {
@@ -541,7 +548,7 @@ func (cont *AciController) Run(stopCh <-chan struct{}) {
 			qs = []workqueue.RateLimitingInterface{
 				cont.podQueue, cont.netPolQueue, cont.qosQueue,
 				cont.serviceQueue, cont.snatQueue, cont.netflowQueue,
-				cont.snatNodeInfoQueue, cont.erspanQueue, podIfQueue,
+				cont.snatNodeInfoQueue, cont.erspanQueue, cont.podIfQueue,
 			}
 		}
 		for _, q := range qs {

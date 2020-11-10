@@ -27,14 +27,14 @@ type ErspanPolicySpec struct {
 //ErspanPolicingType contains all the attrbutes of erspan source and destination sessions.
 type ErspanPolicingType struct {
 	// +kubebuilder:validation:Enum=start,stop
-	AdminState string `json:"adminSt"`
+	AdminState string `json:"admin_state"`
 	// +kubebuilder:validation:Enum=in,out,both
-	Direction string `json:"dir"`
-	DstIp     string `json:"dstIp"`
+	Direction  string `json:"direction"`
+	DestIp     string `json:"destIp"`
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=1023
-	FlowId int    `json:"flowId"`
-	Tag    string `json:"tag"`
+	FlowId     int    `json:"flowId"`
+	Tag        string `json:"tag,omitempty"`
 }
 
 // ErspanPolicyStatus defines the observed state of ErspanPolicy
