@@ -889,17 +889,17 @@ var metadata = map[string]*apicMeta{
 			"adminSt": "start",
 		},
 		children: []string{
-			"spanVSrc", 
+			"spanVSrc",
 			"spanSpanLbl",
 		},
 	},
 	"spanVSrc": {
 		attributes: map[string]interface{}{
-			"name":    "",
-			"dir":     "both",
+			"name": "",
+			"dir":  "both",
 		},
 		children: []string{
-			"spanRsSrcToVPort", 
+			"spanRsSrcToVPort",
 		},
 	},
 	"spanRsSrcToVPort": {
@@ -912,18 +912,18 @@ var metadata = map[string]*apicMeta{
 	},
 	"spanVDestGrp": {
 		attributes: map[string]interface{}{
-			"name":    "",
+			"name": "",
 		},
 		children: []string{
-			"spanVDest", 
+			"spanVDest",
 		},
 	},
 	"spanVDest": {
 		attributes: map[string]interface{}{
-			"name":    "",
+			"name": "",
 		},
 		children: []string{
-			"spanVEpgSummary", 
+			"spanVEpgSummary",
 		},
 	},
 	"spanVEpgSummary": {
@@ -942,8 +942,8 @@ var metadata = map[string]*apicMeta{
 	},
 	"infraAccBndlGrp": {
 		attributes: map[string]interface{}{
-			"name":  "",
-			"lagT":  "node",
+			"name": "",
+			"lagT": "node",
 		},
 		children: []string{
 			"infraRsSpanVSrcGrp",
@@ -952,18 +952,18 @@ var metadata = map[string]*apicMeta{
 	},
 	"infraRsSpanVSrcGrp": {
 		attributes: map[string]interface{}{
-			"tDn":   			  "",
-			"tCl":   			  "spanVSrcGrp",
-			"tType": 			  "name",
-			"tnSpanVSrcGrpName":  "",
+			"tDn":               "",
+			"tCl":               "spanVSrcGrp",
+			"tType":             "name",
+			"tnSpanVSrcGrpName": "",
 		},
 		children: []string{},
 	},
 	"infraRsSpanVDestGrp": {
 		attributes: map[string]interface{}{
-			"tDn":   			  "",
-			"tCl":   			  "spanVDestGrp",
-			"tType": 			  "name",
+			"tDn":                "",
+			"tCl":                "spanVDestGrp",
+			"tType":              "name",
 			"tnSpanVDestGrpName": "",
 		},
 		children: []string{},
