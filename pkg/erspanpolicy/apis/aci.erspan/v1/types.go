@@ -19,18 +19,22 @@ type ErspanPolicySpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "operator-sdk generate k8s" to regenerate code after modifying this file
 	// Add custom validation using kubebuilder tags: https://book.kubebuilder.io/beyond_basics/generating_crd.html
-	Selector PodSelector         `json:"selector,omitempty"`
-	Source   ErspanPolicingType  `json:"source,omitempty"`
-	Dest     ErspanPolicingType  `json:"destination,omitempty"`
+	Selector PodSelector        `json:"selector,omitempty"`
+	Source   ErspanPolicingType `json:"source,omitempty"`
+	Dest     ErspanPolicingType `json:"destination,omitempty"`
 }
 
 //ErspanPolicingType contains all the attrbutes of erspan source and destination sessions.
 type ErspanPolicingType struct {
-	AdminState  string `json:"adminSt"`
-	Direction   string `json:"dir"`
-	DstIp       string `json:"dstIp"`
-	FlowId      int    `json:"flowId"`
-	Tag         string `json:"tag"`
+	// +kubebuilder:validation:Enum=start,stop
+	AdminState string `json:"adminSt"`
+	// +kubebuilder:validation:Enum=in,out,both
+	Direction string `json:"dir"`
+	DstIp     string `json:"dstIp"`
+	// +kubebuilder:validation:Minimum=1
+	// +kubebuilder:validation:Maximum=1023
+	FlowId int    `json:"flowId"`
+	Tag    string `json:"tag"`
 }
 
 // ErspanPolicyStatus defines the observed state of ErspanPolicy

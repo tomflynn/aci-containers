@@ -18,20 +18,19 @@ package controller
 import (
 	"github.com/sirupsen/logrus"
 
+	"github.com/noironetworks/aci-containers/pkg/apicapi"
 	erspanpolicy "github.com/noironetworks/aci-containers/pkg/erspanpolicy/apis/aci.erspan/v1"
 	erspanclientset "github.com/noironetworks/aci-containers/pkg/erspanpolicy/clientset/versioned"
-	podIfclientset "github.com/noironetworksaci-containers/pkg/gbpcrd/clientset/versioned/"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	podIfpolicy "github.com/noironetworks/aci-containers/pkg/gbpcrd/apis/acipolicy/v1"
+	podIfclientset "github.com/noironetworksaci-containers/pkg/gbpcrd/clientset/versioned"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/client-go/tools/cache"
-	"github.com/noironetworks/aci-containers/pkg/apicapi"
-	
 )
 
 const (
 	erspanCRDName = "erspanpolicies.aci.erspan"
-	pofIfCRDName = "podifpolicies.aci.podif"
+	pofIfCRDName  = "podifpolicies.aci.podif"
 )
 
 func ErspanPolicyLogger(log *logrus.Logger, erspan *erspanpolicy.ErspanPolicy) *logrus.Entry {
@@ -121,13 +120,6 @@ func (cont *AciController) initPodIfInformerBase(listWatch *cache.ListWatch) {
 	cont.log.Debug("Initializing podif Informers")
 }
 
-type EndPointData struct {
-	MacAddr   string   `json:"macaddr,omitempty"`
-	EPG       string   `json:"epg,omitempty"`
-	Namespace string   `json:"namespace,omitempty"`
-	PodName   string   `json:"podname,omitempty"`
-}
-
 func (cont *AciController) podIFAdded(obj interface{}) {
 	podif, ok := obj.(*podIfpolicy.PodIF)
 	if !ok {
@@ -136,13 +128,7 @@ func (cont *AciController) podIFAdded(obj interface{}) {
 	}
 
 	cont.log.Infof("podIFAdded - %s", podif.ObjectMeta.Name)
-	mapOfPodNametoEP := make(map[string]*EndPointData){
-		PodName:   podif.Status.PodName,
-		MacAddr:   podif.Status.MacAddr,
-		EPG:       podif.Status.EPG,
-		Namespace: podif.Status.PodNS,
-	}
-	
+
 }
 
 func (cont *AciController) podIFDeleted(obj interface{}) {
@@ -152,13 +138,7 @@ func (cont *AciController) podIFDeleted(obj interface{}) {
 		return
 	}
 
-	kw.log.Infof("podIFDeleted - %s", podif.ObjectMeta.Name)
-	ep := cont.EndPoint{
-		MacAddr:   podif.Status.MacAddr,
-		EPG:       podif.Status.EPG,
-		Namespace: podif.Status.PodNS,
-		PodName:   podif.Status.PodName,
-	}
+	cont.log.Infof("podIFDeleted - %s", podif.ObjectMeta.Name)
 }
 
 func (cont *AciController) erspanPolicyUpdated(obj interface{}) {
@@ -203,11 +183,21 @@ func (cont *AciController) erspanPolicyDelete(obj interface{}) {
 
 }
 
+type EndPointData struct {
+	MacAddr string
+	EPG     string
+}
+
 func (cont *AciController) handleErspanPolUpdate(obj interface{}) bool {
 	span, ok := obj.(*erspanpolicy.ErspanPolicy)
 	if !ok {
 		cont.log.Error("handleErspanPolUpdate: Bad object type")
 		return false
+	}
+	podif, ok := obj.(*aciv1.PodIF)
+	if !ok {
+		kw.log.Errorf("podIFAdded: Bad object type")
+		return
 	}
 	logger := ErspanPolicyLogger(cont.log, span)
 	key, err := cache.MetaNamespaceKeyFunc(span)
@@ -217,48 +207,73 @@ func (cont *AciController) handleErspanPolUpdate(obj interface{}) bool {
 	}
 	labelKey := cont.aciNameForKey("span", key)
 	cont.log.Debug("create erspanpolicy")
-	
+
+	var podIftoEp = map[string]*EndPointData{}
+	podIftoEp["PodName"] = &EndPointData{MacAddr: podif.Status.MacAddr, EPG: podif.Status.EPG}
+	PodName := podIftoEp["PodName"]
+	mac := PodName.MacAddr
+	epg := PodName.EPG
+
 	// Generate source policies
 	srcGrp := apicapi.NewSpanVSrcGrp(labelKey)
-	srcGrpName := srcGrp.GetName()
+	srcName := labelKey + "_Src"
 	apicSlice := apicapi.ApicSlice{srcGrp}
 	srcGrp.SetAttr("adminSt", span.Spec.Source.AdminState)
-	src := apicapi.NewSpanVSrc(srcGrp.GetDn(), labelKey)
+	src := apicapi.NewSpanVSrc(srcGrp.GetDn(), srcName)
 	srcGrp.AddChild(src)
-
 	src.SetAttr("dir", span.Spec.Source.Direction)
-	//fvCEpDn := 
 
-	srcCEp := apicapi.NewSpanRsSrcToVPort(src.GetDn())
+	//epg := cont.podIFAdded.PodName.EPG
+
+	fvCEpDn := fmt.Sprintf("uni/tn-%s/ap-%s/epg-%s/cep-%s", cont.config.AciPolicyTenant, cont.config.AciAppProfile, epg, mac)
+	srcCEp := apicapi.NewSpanRsSrcToVPort(src.GetDn(), fvCEpDn)
 	src.AddChild(srcCEp)
-	
+
 	// Generate destination policies
 	destGrp := apicapi.NewSpanVDestGrp(labelKey)
-	destGrpName := destGrp.GetName()
-	dest := apicapi.NewSpanVDest(destGrp.GetDn(), labelKey)
+	destName := labelKey + "_Dest"
+	dest := apicapi.NewSpanVDest(destGrp.GetDn(), destName)
 	destGrp.AddChild(dest)
 	destSummary := apicapi.NewSpanVEpgSummary(dest.GetDn())
 	dest.AddChild(destSummary)
 	destSummary.SetAttr("dstIp", span.Spec.Dest.DstIp)
 	destSummary.SetAttr("flowId", strconv.Itoa(span.Spec.Dest.FlowId))
-	
-	srcGrp.GetAttr["name"] = tnSpanVSrcGrpName
-	destGrp.GetAttr["name"] = tnSpanVDestGrpName
-	
+	apicSlice = append(apicSlice, destGrp)
+
 	// Set tag
-	lbl := apicapi.NewSpanSpanLbl(srcGrpDn, tnSpanVDestGrpName)
+	lbl := apicapi.NewSpanSpanLbl(srcGrpDn, labelKey)
 	lbl.SetAttr("tag", span.Spec.Dest.Tag)
-	
+
 	//Enable erspan policy on all discovered vpc channels
-	vpc := apicapi.NewInfraAccBndlGrp()
-	infraRsSpanVSrcGrp := apicapi.NewInfraRsSpanVSrcGrp(vpc.GetDn(), tnSpanVSrcGrpName)
-	vpc.AddChild(infraRsSpanVSrcGrp)
-	infraRsSpanVDestGrp := apicapi.NewInfraRsSpanVDestGrp(vpc.GetDn(), tnSpanVDestGrpName)
-	vpc.AddChild(infraRsSpanVDestGrp)
-	return false
-	
+	nMap := make(map[string]string)
+
+	for device := range cont.nodeOpflexDevice {
+		fabricPath, ok := cont.fabricPathForNode(device)
+		if !ok {
+			continue
+		}
+		nMap[device] = fabricPath
+	}
+
+	var paths []string
+	fabPath := nMap[device]
+	for device := range nMap {
+		paths = append(paths, fabPath.fabricPath)
+	}
+	var vpcs []string
+
+	for _, channel := range vpcs {
+
+		vpc := apicapi.NewInfraAccBndlGrp(channel)
+		infraRsSpanVSrcGrp := apicapi.NewInfraRsSpanVSrcGrp(vpc.GetDn(), labelKey)
+		vpc.AddChild(infraRsSpanVSrcGrp)
+		infraRsSpanVDestGrp := apicapi.NewInfraRsSpanVDestGrp(vpc.GetDn(), labelKey)
+		vpc.AddChild(infraRsSpanVDestGrp)
+	}
+
+	cont.log.Info("creating erspan session", apicSlice)
 	cont.apicConn.WriteApicObjects(labelKey, apicSlice)
 
+	return false
+
 }
-
-

@@ -110,6 +110,9 @@ type ControllerConfig struct {
 	// Tenant to use when creating policy objects in APIC
 	AciPolicyTenant string `json:"aci-policy-tenant,omitempty"`
 
+	// Application Profile
+	AciAppProfile string `json:"app-profile,omitempty"`
+
 	// Load Balancer Type
 	LBType string `json:"lb-type,omitempty"`
 
@@ -224,6 +227,7 @@ func NewConfig() *ControllerConfig {
 		NamespaceDefaultSg: make(map[string][]OpflexGroup),
 		AciVmmDomainType:   "Kubernetes",
 		AciPolicyTenant:    "kubernetes",
+		AciAppProfile:      "aci-containers-kubernetes",
 		AciPrefix:          "kube",
 		AllocateServiceIps: &t,
 		LBType:             lbTypeAci,

@@ -351,7 +351,7 @@ func (agent *HostAgent) syncEps() bool {
 				if err != nil {
 					opflexEpLogger(agent.log, ep).
 						Error("Error writing EP file: ", err)
-				} else if wrote || !ep.registered {
+				} else if wrote {
 					needRetry = agent.EPRegAdd(ep)
 				}
 				seen[epidstr] = true
