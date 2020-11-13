@@ -179,6 +179,7 @@ func (env *K8sEnvironment) Init(cont *AciController) error {
 	cont.log.Debug("Initializing indexes")
 	cont.initDepPodIndex()
 	cont.initNetPolPodIndex()
+	//cont.initErspanPolPodIndex()
 	cont.endpointsIpIndex = cidranger.NewPCTrieRanger()
 	cont.targetPortIndex = make(map[string]*portIndexEntry)
 	cont.netPolSubnetIndex = cidranger.NewPCTrieRanger()
@@ -206,6 +207,8 @@ func (env *K8sEnvironment) PrepareRun(stopCh <-chan struct{}) error {
 
 	cont.registerCRDHook(qosCRDName, qosInit)
 	cont.registerCRDHook(netflowCRDName, netflowInit)
+	cont.registerCRDHook(erspanCRDName, erspanInit)
+	cont.registerCRDHook(pofIfCRDName, podIfInit)
 	cont.log.Debug("Starting informers")
 	go cont.nodeInformer.Run(stopCh)
 	go cont.namespaceInformer.Run(stopCh)
@@ -264,6 +267,10 @@ func (env *K8sEnvironment) PrepareRun(stopCh <-chan struct{}) error {
 	go cont.processQueue(cont.netflowQueue, cont.netflowIndexer,
 		func(obj interface{}) bool {
 			return cont.handleNetflowPolUpdate(obj)
+		}, stopCh)
+	go cont.processQueue(cont.erspanQueue, cont.erspanIndexer,
+		func(obj interface{}) bool {
+			return cont.writeErspanApic(obj)
 		}, stopCh)
 	go cont.snatNodeInformer.Run(stopCh)
 	go cont.processQueue(cont.snatNodeInfoQueue, cont.snatNodeInfoIndexer,

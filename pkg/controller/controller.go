@@ -62,6 +62,8 @@ type AciController struct {
 	serviceQueue      workqueue.RateLimitingInterface
 	snatQueue         workqueue.RateLimitingInterface
 	netflowQueue      workqueue.RateLimitingInterface
+	erspanQueue       workqueue.RateLimitingInterface
+	podIfQueue        workqueue.RateLimitingInterface
 	snatNodeInfoQueue workqueue.RateLimitingInterface
 	istioQueue        workqueue.RateLimitingInterface
 
@@ -90,6 +92,10 @@ type AciController struct {
 	qosInformer           cache.Controller
 	netflowIndexer        cache.Indexer
 	netflowInformer       cache.Controller
+	erspanIndexer         cache.Indexer
+	erspanInformer        cache.Controller
+	podIfIndexer          cache.Indexer
+	podIfInformer         cache.Controller
 	istioIndexer          cache.Indexer
 	istioInformer         cache.Controller
 	endpointSliceIndexer  cache.Indexer
@@ -121,6 +127,10 @@ type AciController struct {
 	targetPortIndex map[string]*portIndexEntry
 	// index of ip blocks referenced by network policy egress rules
 	netPolSubnetIndex cidranger.Ranger
+	// index of pods matched by erspan policies
+	erspanPolPods *index.PodSelectorIndex
+
+	podIftoEp map[string]*EndPointData
 
 	apicConn     *apicapi.ApicConnection
 	tunnelIdBase int64
@@ -183,6 +193,12 @@ type portIndexEntry struct {
 type portRangeSnat struct {
 	start int
 	end   int
+}
+
+type EndPointData struct {
+	MacAddr   string
+	EPG       string
+	Namespace string
 }
 
 type ctrPortNameEntry struct {
@@ -271,6 +287,8 @@ func NewController(config *ControllerConfig, env Environment, log *logrus.Logger
 		netPolQueue:       createQueue("networkPolicy"),
 		qosQueue:          createQueue("qos"),
 		netflowQueue:      createQueue("netflow"),
+		erspanQueue:       createQueue("erspan"),
+		podIfQueue:        createQueue("podIf"),
 		serviceQueue:      createQueue("service"),
 		snatQueue:         createQueue("snat"),
 		snatNodeInfoQueue: createQueue("snatnodeinfo"),
@@ -541,7 +559,7 @@ func (cont *AciController) Run(stopCh <-chan struct{}) {
 			qs = []workqueue.RateLimitingInterface{
 				cont.podQueue, cont.netPolQueue, cont.qosQueue,
 				cont.serviceQueue, cont.snatQueue, cont.netflowQueue,
-				cont.snatNodeInfoQueue,
+				cont.snatNodeInfoQueue, cont.erspanQueue, cont.podIfQueue,
 			}
 		}
 		for _, q := range qs {
